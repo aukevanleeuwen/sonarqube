@@ -69,7 +69,9 @@ default['sonarqube']['notifications']['delay'] = nil
 default['sonarqube']['path']['data'] = nil
 default['sonarqube']['path']['temp'] = nil
 
-default['sonarqube']['extra_properties'] = [
-  # 'sonar.security.realm=LDAP',
-  # 'sonar.security.savePassword=false'
-]
+#-----
+# Any properties specified as key/value pairs here end up 'as-is' in sonar.properties
+default['sonarqube']['extra_properties'] = {
+  # 'sonar.security.realm' => 'LDAP',
+  # 'sonar.security.savePassword' => false
+}

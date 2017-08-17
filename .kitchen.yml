@@ -21,6 +21,9 @@ suites:
         oracle:
           accept_oracle_download_terms: true
         install_flavor: oracle
+      sonarqube:
+        extra_properties:
+          foo: 'bar'
   - name: sonarqube_server_mysql
     excludes:
       - ubuntu-12.04

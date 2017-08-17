@@ -6,8 +6,8 @@ provisioner:
   name: chef_zero
 
 platforms:
-  - name: ubuntu-12.04
-  - name: centos-6.8
+  - name: ubuntu-16.04
+  - name: centos-7.3
 
 suites:
   - name: sonarqube_server
@@ -21,11 +21,6 @@ suites:
         oracle:
           accept_oracle_download_terms: true
         install_flavor: oracle
-        jdk:
-          '8':
-            x86_64:
-              url: http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/jdk-8u121-linux-x64.tar.gz
-              checksum: 97e30203f1aef324a07c94d9d078f5d19bb6c50e638e4492722debca588210bc
   - name: sonarqube_server_mysql
     excludes:
       - ubuntu-12.04
@@ -40,16 +35,9 @@ suites:
         oracle:
           accept_oracle_download_terms: true
         install_flavor: oracle
-        jdk:
-          '8':
-            x86_64:
-              url: http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/jdk-8u121-linux-x64.tar.gz
-              checksum: 97e30203f1aef324a07c94d9d078f5d19bb6c50e638e4492722debca588210bc
       sonarqube:
-        mysqlDatabase:
-          host: localhost
-          port: '3306'
-          database: sonar
+        jdbc:
+          url: jdbc:mysql://localhost:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
   - name: sonarqube_scanner
     run_list:
       - recipe[sonarqube::scanner]
@@ -65,8 +53,3 @@ suites:
         oracle:
           accept_oracle_download_terms: true
         install_flavor: oracle
-        jdk:
-          '8':
-            x86_64:
-              url: http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/jdk-8u121-linux-x64.tar.gz
-              checksum: 97e30203f1aef324a07c94d9d078f5d19bb6c50e638e4492722debca588210bc

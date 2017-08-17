@@ -30,11 +30,11 @@ describe ConfigHelper do
     describe 'called with key starting with \'sonar.\'' do
 
       it 'returns a commented out property for non existing keys' do
-        expect(ConfigHelper.property(node, 'sonar.does.not.exist')).to eq '# sonar.does.not.exist='
+        expect(ConfigHelper.property(node, 'sonar.does.not.exist')).to eq '#sonar.does.not.exist='
       end
 
       it 'returns a commented out property for a key that is explicitly nil ' do
-        expect(ConfigHelper.property(node, 'sonar.jdbc.password')).to eq '# sonar.jdbc.password='
+        expect(ConfigHelper.property(node, 'sonar.jdbc.password')).to eq '#sonar.jdbc.password='
       end
 
       it 'looks up the value in the node structure' do
@@ -45,11 +45,11 @@ describe ConfigHelper do
     describe 'called with key not starting with \'sonar.\'' do
 
       it 'returns a commented out property for non existing keys' do
-        expect(ConfigHelper.property(node, 'does.not.exist')).to eq '# does.not.exist='
+        expect(ConfigHelper.property(node, 'does.not.exist')).to eq '#does.not.exist='
       end
 
       it 'returns a commented out property for a key that is explicitly nil ' do
-        expect(ConfigHelper.property(node, 'http.proxyHost')).to eq '# http.proxyHost='
+        expect(ConfigHelper.property(node, 'http.proxyHost')).to eq '#http.proxyHost='
       end
 
       it 'looks up the value in the node structure' do

@@ -15,7 +15,7 @@ module ConfigHelper
     value = eval("node['" +  config_path.join("']['") + "'] rescue nil")
 
     # comment out the value if it's an explicit nil value
-    prefix = value == nil ? '# ' : ''
+    prefix = value == nil ? '#' : ''
 
     "#{prefix}#{key}=#{value}"
   end

@@ -15,8 +15,8 @@ default['sonarqube']['group'] = 'sonarqube'
 # sonar.properties file and use the default.
 # For more information about the properties have a look at templates/default/sonar.properties.erb
 default['sonarqube']['embeddedDatabase']['port'] = nil
-default['sonarqube']['jdbc']['username'] = nil
-default['sonarqube']['jdbc']['password'] = nil
+default['sonarqube']['jdbc']['username'] = 'sonar'
+default['sonarqube']['jdbc']['password'] = 'sonar'
 default['sonarqube']['jdbc']['url'] = nil
 default['sonarqube']['jdbc']['maxActive'] = nil
 default['sonarqube']['jdbc']['maxIdle'] = nil

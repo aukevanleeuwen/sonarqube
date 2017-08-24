@@ -1,6 +1,6 @@
 default['sonarqube']['mirror'] = 'https://sonarsource.bintray.com/Distribution/sonarqube/'
-default['sonarqube']['version'] = '5.6.6'
-default['sonarqube']['checksum'] = '076aa2f119a5ec780b46fdf6f881020821ee0c97d99e067b038a8f04fecb016a'
+default['sonarqube']['version'] = '6.5'
+default['sonarqube']['checksum'] = '1f66bbed4e4b2d974211d980cb52bb9cc2f3b1277eeee33bd98fd0a94f61caa4'
 default['sonarqube']['os_kernel'] = 'linux-x86-64'
 
 default['sonarqube']['config']['dir'] = '/opt/sonarqube-%{version}/conf'
@@ -34,7 +34,14 @@ default['sonarqube']['web']['http']['maxThreads'] = nil
 default['sonarqube']['web']['http']['minThreads'] = nil
 default['sonarqube']['web']['http']['acceptCount'] = nil
 
-default['sonarqube']['ajp']['port'] = nil
+default['sonarqube']['auth']['jwtBase64Hs256Secret'] = nil
+default['sonarqube']['web']['sessionTimeoutInMinutes'] = nil
+default['sonarqube']['web']['sso']['enable'] = nil
+default['sonarqube']['web']['sso']['loginHeader'] = nil
+default['sonarqube']['web']['sso']['nameHeader'] = nil
+default['sonarqube']['web']['sso']['emailHeader'] = nil
+default['sonarqube']['web']['sso']['groupsHeader'] = nil
+default['sonarqube']['web']['sso']['refreshIntervalInMinutes'] = nil
 
 default['sonarqube']['ce']['javaOpts'] = nil
 default['sonarqube']['ce']['javaAdditionalOpts'] = nil
@@ -62,7 +69,6 @@ default['sonarqube']['path']['logs'] = nil
 default['sonarqube']['log']['rollingPolicy'] = nil
 default['sonarqube']['log']['maxFiles'] = nil
 default['sonarqube']['web']['accessLogs']['enable'] = nil
-default['sonarqube']['web']['accessLogs']['pattern'] = nil
 default['sonarqube']['web']['accessLogs']['pattern'] = nil
 
 default['sonarqube']['notifications']['delay'] = nil

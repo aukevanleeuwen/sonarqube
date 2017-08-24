@@ -3,7 +3,7 @@
 
 # Property values can:
 # - reference an environment variable, for example sonar.jdbc.url= ${env:SONAR_JDBC_URL}
-# - be encrypted. See http://redirect.sonarsource.com/doc/settings-encryption.html
+# - be encrypted. See https://redirect.sonarsource.com/doc/settings-encryption.html
 
 #--------------------------------------------------------------------------------------------------
 # DATABASE
@@ -44,7 +44,7 @@
 #sonar.jdbc.url=jdbc:postgresql://localhost/sonar
 
 
-#----- Microsoft SQLServer 2008/2012/2014 and SQL Azure
+#----- Microsoft SQLServer 2012/2014 and SQL Azure
 # A database named sonar must exist and its collation must be case-sensitive (CS) and accent-sensitive (AS)
 # Use the following connection string if you want to use integrated security with Microsoft Sql Server
 # Do not set sonar.jdbc.username or sonar.jdbc.password property if you are using Integrated Security
@@ -65,7 +65,7 @@
 # at the same time, or negative for no limit.
 # The recommended value is 1.2 * max sizes of HTTP pools. For example if HTTP ports are
 # enabled with default sizes (50, see property sonar.web.http.maxThreads)
-# then sonar.jdbc.maxActive should be 1.2 * (50) = 120.
+# then sonar.jdbc.maxActive should be 1.2 * 50 = 60.
 <%= ConfigHelper.property(node, 'sonar.jdbc.maxActive') %>
 
 # The maximum number of connections that can remain idle in the
@@ -95,6 +95,10 @@
 #    The HotSpot Server VM is recommended. The property -server should be added if server mode
 #    is not enabled by default on your environment:
 #    http://docs.oracle.com/javase/8/docs/technotes/guides/vm/server-class.html
+#
+#    Startup can be long if entropy source is short of entropy. Adding
+#    -Djava.security.egd=file:/dev/./urandom is an option to resolve the problem.
+#    See https://wiki.apache.org/tomcat/HowTo/FasterStartUp#Entropy_Source
 #
 <%= ConfigHelper.property(node, 'sonar.web.javaOpts') %>
 
@@ -127,8 +131,45 @@
 # The default value is 25.
 <%= ConfigHelper.property(node, 'sonar.web.http.acceptCount') %>
 
-# TCP port for incoming AJP connections. Disabled if value is -1. Disabled by default.
-<%= ConfigHelper.property(node, 'sonar.ajp.port') %>
+# By default users are logged out and sessions closed when server is restarted.
+# If you prefer keeping user sessions open, a secret should be defined. Value is
+# HS256 key encoded with base64. It must be unique for each installation of SonarQube.
+# Example of command-line:
+# echo -n "type_what_you_want" | openssl dgst -sha256 -hmac "key" -binary | base64
+<%= ConfigHelper.property(node, 'sonar.auth.jwtBase64Hs256Secret') %>
+
+# The inactivity timeout duration of user sessions, in minutes. After the configured
+# period of time, the user is logged out.
+# The default value is set to 3 days (4320 minutes)
+# and cannot be greater than 3 months. Value must be strictly positive.
+<%= ConfigHelper.property(node, 'sonar.web.sessionTimeoutInMinutes') %>
+
+
+#--------------------------------------------------------------------------------------------------
+# SSO AUTHENTICATION
+
+# Enable authentication using HTTP headers
+<%= ConfigHelper.property(node, 'sonar.web.sso.enable') %>
+
+# Name of the header to get the user login.
+# Only alphanumeric, '.' and '@' characters are allowed
+<%= ConfigHelper.property(node, 'sonar.web.sso.loginHeader') %>
+
+# Name of the header to get the user name
+<%= ConfigHelper.property(node, 'sonar.web.sso.nameHeader') %>
+
+# Name of the header to get the user email (optional)
+<%= ConfigHelper.property(node, 'sonar.web.sso.emailHeader') %>
+
+# Name of the header to get the list of user groups, separated by comma (optional).
+# If the sonar.sso.groupsHeader is set, the user will belong to those groups if groups exist in SonarQube.
+# If none of the provided groups exists in SonarQube, the user won't belong to any group.
+# Note that the default group will NOT be automatically added when using SSO, it should be provided in the groups list, if needed.
+<%= ConfigHelper.property(node, 'sonar.web.sso.groupsHeader') %>
+
+# Interval used to know when to refresh name, email and groups.
+# During this interval, if for instance the name of the user is changed in the header, it will only be updated after X minutes.
+<%= ConfigHelper.property(node, 'sonar.web.sso.refreshIntervalInMinutes') %>
 
 
 #--------------------------------------------------------------------------------------------------
@@ -168,7 +209,7 @@
 #    is not enabled by default on your environment:
 #    http://docs.oracle.com/javase/8/docs/technotes/guides/vm/server-class.html
 #
-#sonar.search.javaOpts=-Xmx1G -Xms256m -Xss256k -Djava.net.preferIPv4Stack=true \
+#sonar.search.javaOpts=-Xmx1G -Xms256m -Xss256k -Djna.nosys=true \
 #  -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 \
 #  -XX:+UseCMSInitiatingOccupancyOnly -XX:+HeapDumpOnOutOfMemoryError
 <%= ConfigHelper.property(node, 'sonar.search.javaOpts') %>
@@ -180,7 +221,7 @@
 <%= ConfigHelper.property(node, 'sonar.search.port') %>
 
 # Elasticsearch host. The search server will bind this address and the search client will connect to it.
-# Default is 127.0.0.1.
+# Default is loopback address.
 # As a security precaution, should NOT be set to a publicly available address.
 <%= ConfigHelper.property(node, 'sonar.search.host') %>
 
@@ -214,8 +255,51 @@
 #--------------------------------------------------------------------------------------------------
 # LOGGING
 
-# Level of logs. Supported values are INFO(default), DEBUG and TRACE (DEBUG + SQL + ES requests)
+# SonarQube produces logs in 4 logs files located in the same directory (see property sonar.path.logs below),
+# one per process:
+#   Main process (aka. App) logs in sonar.log
+#   Web Server (aka. Web) logs in web.log
+#   Compute Engine (aka. CE) logs in ce.log
+#   Elasticsearch (aka. ES) logs in es.log
+#
+# All 4 files follow the same rolling policy (see sonar.log.rollingPolicy and sonar.log.maxFiles) but it applies
+# individually (eg. if sonar.log.maxFiles=4, there can be at most 4 of each files, ie. 16 files in total).
+#
+# All 4 files have logs in the same format:
+#           1           2    3           4                       5                                                   6
+# |-----------------| |---| |-|--------------------||------------------------------| |------------------------------------------------------------------------------------------------------------------------------|
+# 2016.11.16 16:47:00 INFO  ce[AVht0dNXFcyiYejytc3m][o.s.s.c.t.CeWorkerCallableImpl] Executed task | project=org.sonarqube:example-java-maven | type=REPORT | id=AVht0dNXFcyiYejytc3m | submitter=admin | time=1699ms
+#
+# 1: timestamp. Format is YYYY.MM.DD HH:MM:SS
+#    YYYY: year on 4 digits
+#    MM: month on 2 digits
+#    DD: day on 2 digits
+#    HH: hour of day on 2 digits in 24 hours format
+#    MM: minutes on 2 digits
+#    SS: seconds on 2 digits
+# 2: log level.
+#    Possible values (in order of descending criticality): ERROR, WARN, INFO, DEBUG and TRACE
+# 3: process identifier. Possible values: app (main), web (Web Server), ce (Compute Engine) and es (Elasticsearch)
+# 4: SQ thread identifier. Can be empty.
+#    In the Web Server, if present, it will be the HTTP request ID.
+#    In the Compute Engine, if present, it will be the task ID.
+# 5: logger name. Usually a class canonical name.
+#    Package names are truncated to keep the whole field to 20 characters max
+# 6: log payload. Content of this field does not follow any specific format, can vary in length and include line returns.
+#    Some logs, however, will follow the convention to provide data in payload in the format " | key=value"
+#    Especially, log of profiled pieces of code will end with " | time=XXXXms".
+
+# Global level of logs (applies to all 4 processes).
+# Supported values are INFO (default), DEBUG and TRACE
 <%= ConfigHelper.property(node, 'sonar.log.level') %>
+
+# Level of logs of each process can be controlled individually with their respective properties.
+# When specified, they overwrite the level defined at global level.
+# Supported values are INFO, DEBUG and TRACE
+#sonar.log.level.app=INFO
+#sonar.log.level.web=INFO
+#sonar.log.level.ce=INFO
+#sonar.log.level.es=INFO
 
 # Path to log files. Can be absolute or relative to installation directory.
 # Default is <installation home>/logs
@@ -234,17 +318,20 @@
 <%= ConfigHelper.property(node, 'sonar.log.maxFiles') %>
 
 # Access log is the list of all the HTTP requests received by server. If enabled, it is stored
-# in the file {sonar.path.logs}/access.log. This file follows the same rolling policy as for
-# sonar.log (see sonar.log.rollingPolicy and sonar.log.maxFiles).
+# in the file {sonar.path.logs}/access.log. This file follows the same rolling policy as other log file
+# (see sonar.log.rollingPolicy and sonar.log.maxFiles).
 <%= ConfigHelper.property(node, 'sonar.web.accessLogs.enable') %>
 
 # Format of access log. It is ignored if sonar.web.accessLogs.enable=false. Possible values are:
 #    - "common" is the Common Log Format, shortcut to: %h %l %u %user %date "%r" %s %b
 #    - "combined" is another format widely recognized, shortcut to: %h %l %u [%t] "%r" %s %b "%i{Referer}" "%i{User-Agent}"
 #    - else a custom pattern. See http://logback.qos.ch/manual/layouts.html#AccessPatternLayout.
+# The login of authenticated user is not implemented with "%u" but with "%reqAttribute{LOGIN}" (since version 6.1).
+# The value displayed for anonymous users is "-".
+# The SonarQube's HTTP request ID can be added to the pattern with "%reqAttribute{ID}" (since version 6.2).
 # If SonarQube is behind a reverse proxy, then the following value allows to display the correct remote IP address:
-#sonar.web.accessLogs.pattern=%i{X-Forwarded-For} %l %u [%t] "%r" %s %b "%i{Referer}" "%i{User-Agent}"
-# Default value is:
+#sonar.web.accessLogs.pattern=%i{X-Forwarded-For} %l %u [%t] "%r" %s %b "%i{Referer}" "%i{User-Agent}" "%reqAttribute{ID}"
+# Default value (which was "combined" before version 6.2) is equivalent to "combined + SQ HTTP request ID":
 <%= ConfigHelper.property(node, 'sonar.web.accessLogs.pattern') %>
 
 
@@ -268,10 +355,6 @@
 # Dev mode allows to reload web sources on changes and to restart server when new versions
 # of plugins are deployed.
 #sonar.web.dev=false
-
-# Path to webapp sources for hot-reloading of Ruby on Rails, JS and CSS (only core,
-# plugins not supported).
-#sonar.web.dev.sources=/path/to/server/sonar-web/src/main/webapp
 
 # Elasticsearch HTTP connector, for example for KOPF:
 # http://lmenezes.com/elasticsearch-kopf/?location=http://localhost:9010
